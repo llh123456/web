@@ -1,0 +1,14 @@
+# 启动服务
+yarn run dev
+
+# 打包测试环境
+yarn run build:sit
+
+# 打包正式环境
+yarn run build:prod
+
+# 分析构建文件体积
+yarn run build:prod --report
+
+# 自动修复
+npm run lint -- --fix
