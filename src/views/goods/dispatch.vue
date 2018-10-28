@@ -38,10 +38,10 @@
         <el-row class="tr">
           <el-col :span="24">
             <div class="cell">
-              NO.{{item.logisticsOrder.orderCode}} &nbsp; &nbsp; <span class="_time">审核时间：{{item.logisticsOrder.crtTime}}</span>
-              <div class="fr" v-if="item.state === 2">
+              NO.{{item.orderCode}} &nbsp; &nbsp; <span class="_time">审核时间：{{item.crtTime}}</span>
+              <div class="fr" v-if="item.state === 6">
                 <span class="link-type" @click="handleDetails(item)">派车</span>
-                <span class="link-type" @click="handleDetails(item)">详情</span>
+                <!--<span class="link-type" @click="handleDetails(item)">详情</span>-->
               </div>
               <div class="fr" v-else>
                 <span class="link-type" @click="handleDetails(item)">详情</span>
@@ -51,29 +51,30 @@
         </el-row>
         <el-row class="td">
           <el-col :span="4">
-            <div class="cell">{{item.logisticsOrder.goodsNames}}<!--<br>{{item.logisticsOrder.publishNumber}}{{item.logisticsOrder.publishUnitName}}--></div>
+            <div class="cell">{{item.goodsNames}}<!--<br>{{item.publishNumber}}{{item.publishUnitName}}--></div>
           </el-col>
           <el-col :span="3">
-            <div class="cell">{{item.logisticsOrder.postContactName}}<br>{{item.logisticsOrder.postContactPhone}}</div>
+            <div class="cell">{{item.postContactName}}<br>{{item.postContactPhone}}</div>
           </el-col>
           <el-col :span="4">
-            <div class="cell">发：{{item.logisticsOrder.postWareAddress}}<br>收：{{item.logisticsOrder.reciveWareAddress}}</div>
+            <div class="cell">发：{{item.postWareAddress}}<br>收：{{item.reciveWareAddress}}</div>
           </el-col>
           <el-col :span="5">
-            <div class="cell">发车：{{item.logisticsOrder.postDepartureTime}}<br>到货：{{item.logisticsOrder.reciveDepartureTime}}</div>
+            <div class="cell">发车：{{item.postDepartureTime}}<br>到货：{{item.reciveDepartureTime}}</div>
           </el-col>
           <el-col class="is-center" :span="2">
             <div class="cell">
-              {{item.logisticsOrderNumber}}
+              {{item.consignmentOrderNumber}}
             </div>
           </el-col>
           <el-col class="is-center" :span="2">
             <div class="cell">
-              {{dispatchState[item.state]}}
+              <span v-if="item.state === 6">派车中</span>
+              <span v-else>已完成</span>
             </div>
           </el-col>
           <el-col :span="4">
-            <div class="cell">{{item.logisticsOrder.sendRemark}}</div>
+            <div class="cell">{{item.sendRemark}}</div>
           </el-col>
         </el-row>
       </div>
@@ -112,15 +113,13 @@ export default {
         page: 1,
         limit: 20,
         orderCode: undefined,
-        state: undefined,
+        state: 6,
         goodsName: '',
         postContactName: ''
       },
       stateList: [
-        { 'value': undefined, 'label': '全部' },
-        { 'value': '2', 'label': '待派车' },
-        { 'value': '5', 'label': '已派车' },
-        { 'value': '6', 'label': '已完成' }
+        { 'value': '6', 'label': '派车中' },
+        { 'value': '8', 'label': '已完成' }
       ]
     }
   },

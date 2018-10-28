@@ -428,6 +428,7 @@ export default {
     fetchData(id) {
       getObj(id).then(response => {
         this.form = response.data
+        this.form.sendRemarkTypeList = this.form.sendRemarkTypeList || []
         this.options = [{ value: this.form.shipperId, label: this.form.shipperName }]
         this.postInfo = {
           customerCompanyName: response.data.postCompanyName,

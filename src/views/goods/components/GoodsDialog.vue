@@ -128,7 +128,7 @@ export default {
       this.listQuery.pageNum = val
       this.getList()
     },
-    // 清楚数据
+    // 清除数据
     cleared() {
       this.total = null
       this.listQuery = {

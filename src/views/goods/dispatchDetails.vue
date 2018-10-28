@@ -2,7 +2,113 @@
   <div class="app-container">
     <div class="header-form-container">
       <div class="state">
-        <svg-icon style="font-size: 16px;" icon-class="order_icon"/> &nbsp;状态: {{dispatchState[temp.state]}}
+        <svg-icon style="font-size: 16px;" icon-class="order_icon"/> &nbsp;状态: 
+        <span v-if="form.state === 6">派车中</span>
+        <span v-else>已完成</span>
+      </div>
+    </div>
+    <div class="tableTitle">接单信息</div>
+    <div class="driver-msg">
+      <div class="state-filter">
+        <el-radio-group  @change="getList()" v-model="state" size="mini" >
+          <el-radio-button v-for="(item, index) in stateList" :key="item.value" :label="item.value">{{item.label}}
+          </el-radio-button>
+        </el-radio-group>
+      </div>
+      <el-table :key='tableKey' v-if="form.state===6" :data="carList" height="300" v-loading="listLoading" @selection-change="handleCurrentChangeRow" tooltip-effect="dark" stripe border fit highlight-current-row
+        style="width: 100%;">
+        <el-table-column
+          v-if="disabled"
+          type="selection"
+          width="42">
+        </el-table-column>
+        <el-table-column
+          prop="trackPlatNumber"
+          align="center"
+          label="车牌号"
+          width="120">
+        </el-table-column>
+        <el-table-column
+          prop="ownerName"
+          align="center"
+          label="车主账号"
+          width="120">
+        </el-table-column>
+        <el-table-column
+          prop="ownerName"
+          align="center"
+          label="姓名" 
+          width="120">
+        </el-table-column>
+        <el-table-column
+          prop="tracker.brandName"
+          align="center"
+          label="车型">
+        </el-table-column>
+        <el-table-column
+          prop="tracker.loadWeight"
+          align="center"
+          label="核定载重量"
+          width="100">
+        </el-table-column>
+        <el-table-column
+          prop="crtTime"
+          align="center"
+          label="接单时间"
+          width="160">
+        </el-table-column>
+        <!--<el-table-column
+          align="center"
+          label="操作"
+          width="100">
+          <template slot-scope="scope" v-if="disabled">
+            <span class="link-type" @click="onCheck(scope.row)">审核</span>
+          </template>
+        </el-table-column>-->
+      </el-table>
+      <el-table :key='tableKey' v-else :data="carList" height="300" v-loading="listLoading" @selection-change="handleCurrentChangeRow" tooltip-effect="dark" stripe border fit highlight-current-row
+        style="width: 100%;">
+        <el-table-column
+          prop="trackPlatNumber"
+          align="center"
+          label="车牌号"
+          width="120">
+        </el-table-column>
+        <el-table-column
+          prop="ownerName"
+          align="center"
+          label="车主账号"
+          width="120">
+        </el-table-column>
+        <el-table-column
+          prop="ownerName"
+          align="center"
+          label="姓名" 
+          width="120">
+        </el-table-column>
+        <el-table-column
+          prop="tracker.brandName"
+          align="center"
+          label="车型">
+        </el-table-column>
+        <el-table-column
+          prop="tracker.loadWeight"
+          align="center"
+          label="核定载重量"
+          width="100">
+        </el-table-column>
+        <el-table-column
+          prop="crtTime"
+          align="center"
+          label="接单时间"
+          width="160">
+        </el-table-column>
+      </el-table>
+      <div class="footerBox" v-if="form.state===6">
+        <el-button type="primary" :loading="loading" @click="onSendCar">审核派车</el-button>
+        <el-button type="primary" :loading="loading" @click="onAddCar">添加车辆</el-button>
+        <el-button type="primary" :loading="loading" @click="onCancel">取消</el-button>
+        <el-button type="primary" :loading="loading" @click="onComplete">派车完成</el-button>
       </div>
     </div>
     <div class="tableTitle">货源信息</div>
@@ -40,6 +146,7 @@
           <th>包装物</th>
           <th>包装型号</th>
           <th>包装数量</th>
+          <th>剩余货物数量</th>
           <th style="min-width: 200px;">应急处理方式</th>
         </tr>
         <tr v-for="(item, index) in form.goodsList">
@@ -49,11 +156,12 @@
           <td>{{item.packageName}}</td>
           <td>{{item.packageModel}}</td>
           <td>{{item.packageNumber}}</td>
+          <td><span style="color: red;">{{item.haveGoodsNumber}}</span></td>
           <td>{{item.remark}}</td>
         </tr>
       </table>
     </div>
-    <div v-if="form.state === 6 ||　form.state === 8">
+    <div>
       <div class="tableTitle">线路与运价信息</div>
       <table class="table-border addTable">
         <tr>
@@ -134,13 +242,18 @@
         <el-input type="textarea" v-model="form.sendRemark" resize="none" :rows="3"  :disabled="true" style="margin-top: 15px; height: 50px;"></el-input>
       </div>
     </div>
+    <car-dialog ref="carDialog" :is-active="carDialogVisible" @updateList="addList" @toggleClick="carDialogToggle"></car-dialog>
+    <send-dialog ref="sendDialog" :is-active="sendDialogVisible" @updateList="sendList" @toggleClick="sendDialogToggle"></send-dialog>
   </div>
 </template>
 
 <script>
 import { mapGetters } from 'vuex'
 // import { getObj } from '@/api/goods/goods'
-import { getObj } from '@/api/goods/consignment'
+import { getObj, getTruckListByLogisticsOrder, createConsiginOrderByPc, cancelTruckBatch, endTruck } from '@/api/goods/consignment'
+import CarDialog from './components/CarDialog'
+import SendDialog from './components/SendDialog'
+import { isInArray, getParamValues } from '@/utils'
 
 var defaultForm = {
   // platform: 3,
@@ -162,6 +275,10 @@ var defaultForm = {
 
 export default {
   name: 'dispatchDetails',
+  components: {
+    CarDialog,
+    SendDialog
+  },
   data() {
     return {
       boxList: ['危险品', '防潮', '防火', '防撞'],
@@ -171,6 +288,22 @@ export default {
       checkedOther: ['装卸服务'],
       otherRemark: '这个要求可以有',
       form: JSON.parse(JSON.stringify(defaultForm)),
+      tableKey: 0,
+      loading: false,
+      carDialogVisible: false,
+      sendDialogVisible: false,
+      listLoading: false,
+      currentRow: [], // 行ID
+      stateList: [
+        { 'value': 1, 'label': '未派车' },
+        { 'value': 2, 'label': '已派车' },
+        { 'value': 3, 'label': '已取消' }
+      ],
+      state: 1,
+      carList: [],
+      listCancel: [],
+      listNotSubmit: [],
+      listSubmit: [],
       temp: {},
       lineInfo: {} // 线路信息
     }
@@ -179,7 +312,10 @@ export default {
     ...mapGetters([
       'goodsState',
       'dispatchState'
-    ])
+    ]),
+    disabled() {
+      return !(this.state !== 1)
+    }
   },
   created() {
     const id = this.$route.query && this.$route.query.id
@@ -188,15 +324,145 @@ export default {
     }
   },
   methods: {
+    closeFrom() {
+      this.$store.dispatch('delVisitedViews', this.$route).then((views) => {
+        if (isInArray(this.$store.getters.cachedViews, 'dispatch')) {
+          setTimeout(() => {
+            this.$parent.$refs.routerview.getList()
+            // this.getList()
+          }, 1000)
+        }
+        this.$router.push({ name: 'dispatch' })
+      })
+    },
+    // 审核派车
+    onSendCar() {
+      if (!this.currentRow.length) {
+        this.$message.error('请至少选择一条记录！')
+        return
+      }
+      this.sendDialogVisible = true
+      this.$refs.sendDialog.id = this.$route.query && this.$route.query.id
+      this.$refs.sendDialog.form = this.form
+      this.$refs.sendDialog.ids = getParamValues('id', this.currentRow)
+      this.$nextTick(() => (this.$refs.sendDialog.getList()))
+    },
+    sendDialogToggle() {
+      this.sendDialogVisible = false
+    },
+    // 审核更新
+    sendList() {
+      this.getCar()
+      /* sendTruck().then(response => {
+        this.getCar()
+      }) */
+    },
+    // 添加车辆
+    onAddCar() {
+      this.carDialogVisible = true
+      this.$nextTick(() => (this.$refs.carDialog.getList()))
+    },
+    carDialogToggle() {
+      this.carDialogVisible = false
+    },
+    // 更新车辆
+    addList(res) {
+      const ids = res.map(item => {
+        return item.id
+      })
+      createConsiginOrderByPc(this.$route.query.id, ids).then(response => {
+        this.getCar()
+      })
+    },
+    // 审核
+    onCheck(row) {
+      this.$confirm('是否继续?', '审核通过', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'success',
+        center: true
+      }).then(() => {
+        console.log(0)
+      }).catch(() => {
+      })
+    },
+    // 取消
+    onCancel() {
+      if (!this.currentRow.length) {
+        this.$message.error('请至少选择一条记录！')
+        return
+      }
+      this.$confirm('是否继续?', '此操作将取消车辆运输', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'success',
+        center: true
+      }).then(() => {
+        const list = this.currentRow.map(item => {
+          return { id: item.id, msg: '' }
+        })
+        cancelTruckBatch(list).then(response => {
+          this.getCar()
+        })
+      }).catch(() => {
+      })
+    },
+    // 完成
+    onComplete() {
+      this.$confirm('是否继续?', '完成所有派车', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'success',
+        center: true
+      }).then(() => {
+        endTruck(this.$route.query.id).then(response => {
+          this.closeFrom()
+        })
+      }).catch(() => {
+      })
+    },
+    // 派车列表
+    getList() {
+      this.currentRow = []
+      if (this.state === 1) {
+        this.carList = this.listNotSubmit
+      } else if (this.state === 2) {
+        this.carList = this.listSubmit
+      } else {
+        this.carList = this.listCancel
+      }
+    },
+    // 选中行
+    handleCurrentChangeRow(val) {
+      this.currentRow = val || []
+    },
+    getCar() {
+      this.listLoading = true
+      const id = this.$route.query && this.$route.query.id
+      getTruckListByLogisticsOrder(id).then(response => {
+        this.listNotSubmit = response.data.listNotSubmit
+        this.listCancel = response.data.listCancel
+        this.listSubmit = response.data.listSubmit
+        this.carList = this.listNotSubmit
+        this.listLoading = false
+      }).catch(() => {
+        this.listLoading = false
+      })
+    },
     fetchData(id) {
+      // this.listLoading = true
+      this.getCar()
       getObj(id).then(response => {
         this.temp = response.data
-        this.form = response.data.logisticsOrder
+        this.form = response.data
         this.options = [{ value: this.form.shipperId, label: this.form.shipperName }]
         this.form.service = this.form.serviceList
+        // this.listLoading = false
         this.form.serviceList = this.form.serviceList.map((item) => {
           return item.name
         })
+      }).catch(() => {
+        // this.listLoading = false
       })
     }
   }
@@ -222,6 +488,7 @@ export default {
   }
   .table-border {
     border: none !important;
+    table-layout: fixed;
     th {
       width: 100px;
       text-align: right;
